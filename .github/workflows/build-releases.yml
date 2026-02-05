@@ -64,12 +64,6 @@ jobs:
         mkdir -p ${{ env.INSTALL_DIR }}/share/falkon
         cp -r /usr/share/falkon/* ${{ env.INSTALL_DIR }}/share/falkon/ 2>/dev/null || true
 
-        mkdir -p ${{ env.INSTALL_DIR }}/share/icons/hicolor
-        cp -r /usr/share/icons/hicolor/*/apps/falkon* ${{ env.INSTALL_DIR }}/share/icons/hicolor/*/apps/ 2>/dev/null || true
-
-        mkdir -p ${{ env.INSTALL_DIR }}/share/locale
-        find /usr/share/locale -name "*falkon*.qm" -exec cp --parents {} ${{ env.INSTALL_DIR }}/share/locale/ \; 2>/dev/null || true
-
         mkdir -p ${{ env.INSTALL_DIR }}/share/applications
         cp /usr/share/applications/org.kde.falkon.desktop ${{ env.INSTALL_DIR }}/share/applications/ 2>/dev/null || true
 
@@ -77,7 +71,16 @@ jobs:
         cp /usr/share/metainfo/org.kde.falkon.appdata.xml ${{ env.INSTALL_DIR }}/share/metainfo/ 2>/dev/null || true
 
         # Falkon-specific libraries/plugins if present
+        mkdir -p ${{ env.INSTALL_DIR }}/lib
         cp -r /usr/lib/falkon ${{ env.INSTALL_DIR }}/lib/ 2>/dev/null || true
+
+    - name: Bundle Falkon icons (correct relative structure)
+      run: |
+        find /usr/share/icons -type f -name "falkon*" -exec sh -c 'rel_dir=$(dirname "$1" | sed "s|^/usr/share/icons/||"); mkdir -p "${{ env.INSTALL_DIR }}/share/icons/$rel_dir"; cp "$1" "${{ env.INSTALL_DIR }}/share/icons/$rel_dir/"' _ {} \; || true
+
+    - name: Bundle Falkon translations (correct relative structure, no /usr nesting)
+      run: |
+        find /usr/share/locale -type f -name "*falkon*.qm" -exec sh -c 'rel_dir=$(dirname "$1" | sed "s|^/usr/share/locale/||"); mkdir -p "${{ env.INSTALL_DIR }}/share/locale/$rel_dir"; cp "$1" "${{ env.INSTALL_DIR }}/share/locale/$rel_dir/"' _ {} \; || true
 
     - name: Bundle Qt plugins, libexec, resources and translations
       run: |
@@ -171,10 +174,10 @@ jobs:
         EOF
         chmod +x ${{ env.INSTALL_DIR }}/bin/falkon
 
-    - name: Debug - List portable directory contents
+    - name: Debug - List final portable directory contents
       run: |
-        echo "Final contents of ${{ env.INSTALL_DIR }}:"
-        ls -R ${{ env.INSTALL_DIR }}
+        echo "Final structure of ${{ env.INSTALL_DIR }}:"
+        find ${{ env.INSTALL_DIR }} -type f | sed -e "s|${{ env.INSTALL_DIR }}/||" | sort
 
     - name: Upload installation artifact
       uses: actions/upload-artifact@v4
@@ -182,3 +185,4 @@ jobs:
         name: falkon-install
         path: ${{ env.INSTALL_DIR }}
         retention-days: 30
+        if-no-files-found: error
