@@ -168,7 +168,7 @@ jobs:
         SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
         export LD_LIBRARY_PATH="${SCRIPT_DIR}/../lib${LD_LIBRARY_PATH:+:}${LD_LIBRARY_PATH}"
         export QT_PLUGIN_PATH="${SCRIPT_DIR}/../qt/plugins"
-        export QTWEBENGINE_PROCESS_PATH="${SCRIPT_DIR}/../qt/libexec/QtWebEngineProcess"
+        export QTWEBENGINEPROCESS_PATH="${SCRIPT_DIR}/../qt/libexec/QtWebEngineProcess"
         export XDG_DATA_DIRS="${SCRIPT_DIR}/../share${XDG_DATA_DIRS:+:}${XDG_DATA_DIRS}"
         export QT_QPA_PLATFORM="xcb"
         export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"
