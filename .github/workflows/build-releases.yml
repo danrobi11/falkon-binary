@@ -9,106 +9,23 @@ on:
 jobs:
   build-falkon:
     runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
     env:
       SOURCE_DIR: falkon
       BUILD_DIR: build
       INSTALL_DIR: ${{ github.workspace }}/falkon-install
-      QT_VERSION: 6.8.*
-      QT_DIR: ${{ github.workspace }}/Qt
-      QT_ARCH: gcc_64
 
     steps:
-    - name: Install system dependencies
+    - name: Update system and install dependencies
       run: |
-        sudo apt update -y
-        sudo apt install -y \
-          build-essential cmake git pkg-config zip patchelf ninja-build \
-          libxcb1-dev libxcb-keysyms1-dev libxcb-icccm4-dev libxcb-cursor-dev libxkbcommon-x11-dev \
-          libxcb-render-util0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
-          zlib1g-dev libbz2-dev liblzma-dev \
-          libgpgme-dev libssl-dev
-
-    - name: Install Qt 6.8
-      uses: jurplel/install-qt-action@v4
-      with:
-        version: ${{ env.QT_VERSION }}
-        host: linux
-        target: desktop
-        arch: ${{ env.QT_ARCH }}
-        dir: ${{ env.QT_DIR }}
-        modules: qtdeclarative qtprintsupport qtsvg qtwebchannel qtpositioning qtwebengine qtdbus
-        cached: false
-
-    - name: Set Qt environment variables
-      run: |
-        QT_PATH="${{ env.QT_DIR }}/$(ls ${{ env.QT_DIR }} | grep 6.8)/${{ env.QT_ARCH }}"
-        echo "QTDIR=$QT_PATH" >> $GITHUB_ENV
-        echo "$QT_PATH/bin" >> $GITHUB_PATH
-        echo "QT_INSTALL_DIR=$QT_PATH" >> $GITHUB_ENV
-
-    - name: Build and install Extra CMake Modules (ECM)
-      run: |
-        git clone --depth 1 https://invent.kde.org/frameworks/extra-cmake-modules.git kf6-ecm
-        mkdir kf6-ecm/build && cd kf6-ecm/build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-        cmake --build . --parallel
-        sudo cmake --install .
-
-    - name: Build and install KF6 KConfig
-      run: |
-        git clone --depth 1 https://invent.kde.org/frameworks/kconfig.git kf6-kconfig
-        mkdir kf6-kconfig/build && cd kf6-kconfig/build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-        cmake --build . --parallel
-        sudo cmake --install .
-
-    - name: Build and install KF6 KCoreAddons
-      run: |
-        git clone --depth 1 https://invent.kde.org/frameworks/kcoreaddons.git kf6-kcoreaddons
-        mkdir kf6-kcoreaddons/build && cd kf6-kcoreaddons/build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-        cmake --build . --parallel
-        sudo cmake --install .
-
-    - name: Build and install KF6 KI18n
-      run: |
-        git clone --depth 1 https://invent.kde.org/frameworks/ki18n.git kf6-ki18n
-        mkdir kf6-ki18n/build && cd kf6-ki18n/build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-        cmake --build . --parallel
-        sudo cmake --install .
-
-    - name: Build and install KF6 KArchive
-      run: |
-        git clone --depth 1 https://invent.kde.org/frameworks/karchive.git kf6-karchive
-        mkdir kf6-karchive/build && cd kf6-karchive/build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-        cmake --build . --parallel
-        sudo cmake --install .
-
-    - name: Build and install KF6 KCrash
-      run: |
-        git clone --depth 1 https://invent.kde.org/frameworks/kcrash.git kf6-kcrash
-        mkdir kf6-kcrash/build && cd kf6-kcrash/build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-        cmake --build . --parallel
-        sudo cmake --install .
-
-    - name: Build and install KF6 KWindowSystem
-      run: |
-        git clone --depth 1 https://invent.kde.org/frameworks/kwindowsystem.git kf6-kwindowsystem
-        mkdir kf6-kwindowsystem/build && cd kf6-kwindowsystem/build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-        cmake --build . --parallel
-        sudo cmake --install .
-
-    - name: Build and install KF6 KWallet
-      run: |
-        git clone --depth 1 https://invent.kde.org/frameworks/kwallet.git kf6-kwallet
-        mkdir kf6-kwallet/build && cd kf6-kwallet/build
-        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
-        cmake --build . --parallel
-        sudo cmake --install .
+        pacman -Syu --noconfirm
+        pacman -S --noconfirm \
+          base-devel git cmake extra-cmake-modules ninja patchelf zip \
+          qt6-base qt6-declarative qt6-svg qt6-webengine qt6-webchannel qt6-positioning qt6-printsupport \
+          kf6-kconfig kf6-kcoreadditions kf6-ki18n kf6-karchive kf6-kcrash kf6-kwindowsystem kf6-kwallet \
+          libxcb gpgme openssl
 
     - name: Clone Falkon source from Git
       run: |
@@ -135,17 +52,20 @@ jobs:
 
     - name: Bundle Qt plugins, libexec, resources and translations
       run: |
+        QT_SYSTEM_DIR=/usr/lib/qt6
+        SHARE_DIR=/usr/share/qt6
+
         mkdir -p ${{ env.INSTALL_DIR }}/qt/plugins
-        cp -r ${{ env.QT_INSTALL_DIR }}/plugins/* ${{ env.INSTALL_DIR }}/qt/plugins/ 2>/dev/null || true
+        cp -r $QT_SYSTEM_DIR/plugins/* ${{ env.INSTALL_DIR }}/qt/plugins/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/libexec
-        cp -r ${{ env.QT_INSTALL_DIR }}/libexec/* ${{ env.INSTALL_DIR }}/qt/libexec/ 2>/dev/null || true
+        cp -r $QT_SYSTEM_DIR/libexec/* ${{ env.INSTALL_DIR }}/qt/libexec/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/resources
-        cp -r ${{ env.QT_INSTALL_DIR }}/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
+        cp -r $QT_SYSTEM_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales
-        cp -r ${{ env.QT_INSTALL_DIR }}/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
+        cp -r $SHARE_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
 
     - name: Bundle shared libraries into installation
       run: |
