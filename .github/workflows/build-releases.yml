@@ -36,24 +36,28 @@ jobs:
       run: |
         git clone --depth 1 --branch master https://invent.kde.org/network/falkon.git ${{ env.SOURCE_DIR }}
 
-    - name: Configure build with CMake
+    - name: Configure build with CMake (Ninja generator)
       run: |
         cd ${{ env.SOURCE_DIR }}
         cmake -S . -B ${{ env.BUILD_DIR }} \
+          -G Ninja \
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_DIR }} \
           -DCMAKE_BUILD_TYPE=Release \
           -DBUILD_TESTING=OFF \
           -DBUILD_PYTHON_SUPPORT=OFF
 
-    - name: Compile (limited parallelism to reduce memory usage)
+    - name: Compile (limited parallelism)
       run: |
-        cd ${{ env.SOURCE_DIR }}
-        cmake --build ${{ env.BUILD_DIR }} --parallel 3
+        ninja -C ${{ env.BUILD_DIR }} -j 3
 
     - name: Install to local directory
       run: |
-        cd ${{ env.SOURCE_DIR }}
-        cmake --install ${{ env.BUILD_DIR }}
+        ninja -C ${{ env.BUILD_DIR }} install
+
+    - name: Debug - List contents of installation directory
+      run: |
+        echo "Contents of ${{ env.INSTALL_DIR }}:"
+        ls -R ${{ env.INSTALL_DIR }} || echo "Installation directory is empty or does not exist."
 
     - name: Bundle Qt plugins, libexec, resources and translations
       run: |
@@ -135,8 +139,9 @@ jobs:
 
     - name: Create launcher script
       run: |
-        mv ${{ env.INSTALL_DIR }}/bin/falkon ${{ env.INSTALL_DIR }}/bin/falkon.bin
-        cat << 'EOF' > ${{ env.INSTALL_DIR }}/bin/falkon
+        if [ -f "${{ env.INSTALL_DIR }}/bin/falkon" ]; then
+          mv ${{ env.INSTALL_DIR }}/bin/falkon ${{ env.INSTALL_DIR }}/bin/falkon.bin
+          cat << 'EOF' > ${{ env.INSTALL_DIR }}/bin/falkon
         #!/bin/sh
         SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
         export LD_LIBRARY_PATH="${SCRIPT_DIR}/../lib${LD_LIBRARY_PATH:+:}${LD_LIBRARY_PATH}"
@@ -145,7 +150,11 @@ jobs:
         export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"
         exec "${SCRIPT_DIR}/falkon.bin" "$@"
         EOF
-        chmod +x ${{ env.INSTALL_DIR }}/bin/falkon
+          chmod +x ${{ env.INSTALL_DIR }}/bin/falkon
+        else
+          echo "Falkon binary not found in installation directory."
+          exit 1
+        fi
 
     - name: Upload installation artifact
       uses: actions/upload-artifact@v4
