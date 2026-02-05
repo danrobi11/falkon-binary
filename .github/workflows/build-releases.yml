@@ -48,10 +48,12 @@ jobs:
 
     - name: Compile (limited parallelism)
       run: |
+        cd ${{ env.SOURCE_DIR }}
         ninja -C ${{ env.BUILD_DIR }} -j 3
 
     - name: Install to local directory
       run: |
+        cd ${{ env.SOURCE_DIR }}
         ninja -C ${{ env.BUILD_DIR }} install
 
     - name: Debug - List contents of installation directory
