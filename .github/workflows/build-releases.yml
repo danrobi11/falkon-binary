@@ -102,13 +102,12 @@ jobs:
     - name: Bundle shared libraries into installation
       run: |
         mkdir -p ${{ env.INSTALL_DIR }}/lib
-        EXCLUDE="libc.so libm.so libpthread.so librt.so libdl.so ld-linux-x86-64.so libutil.so libresolv.so libcrypt.so libnss_ libgcc_s.so libstdc++.so libmvec.so.1 libssh.so \
+        EXCLUDE="libc.so libm.so libpthread.so librt.so libdl.so ld-linux-x86-64.so libutil.so libresolv.so libcrypt.so libnss_ libgcc_s.so libstdc++.so libmvec.so.1 \
                  libasound.so libpulse.so libpulse-simple.so libpipewire \
-                 libX11.so libXss.so libXpresent.so libXext.so libXrandr.so libXinerama.so libxcb.so \
                  libvulkan.so libva.so libva-drm.so libva-x11.so libva-wayland.so libvdpau.so \
                  libGL.so libGLX.so libGLdispatch.so libEGL.so libGLES libdrm.so libgbm.so"
 
-        FILES="${{ env.INSTALL_DIR }}/bin/falkon.bin ${{ env.INSTALL_DIR }}/qt/libexec/QtWebEngineProcess"
+        FILES="${{ env.INSTALL_DIR }}/bin/falkon.bin ${{ env.INSTALL_DIR }}/qt/libexec/QtWebEngineProcess ${{ env.INSTALL_DIR }}/qt/plugins/platforms/libqxcb.so"
         for file in $FILES; do
           [ -f "$file" ] || continue
           ldd "$file" | grep '=>' | awk '{print $3}' | sort -u | while read libpath; do
@@ -154,7 +153,6 @@ jobs:
                ${{ env.INSTALL_DIR }}/lib/libgcc_s.so.* \
                ${{ env.INSTALL_DIR }}/lib/libstdc++.so.* \
                ${{ env.INSTALL_DIR }}/lib/libmvec.so.* \
-               ${{ env.INSTALL_DIR }}/lib/libssh.so.* \
                ${{ env.INSTALL_DIR }}/lib/libanl.so.* \
                ${{ env.INSTALL_DIR }}/lib/libBrokenLocale.so.* \
                ${{ env.INSTALL_DIR }}/lib/libthread_db.so.* \
@@ -171,6 +169,7 @@ jobs:
         export QT_PLUGIN_PATH="${SCRIPT_DIR}/../qt/plugins"
         export QTWEBENGINE_PROCESS_PATH="${SCRIPT_DIR}/../qt/libexec/QtWebEngineProcess"
         export XDG_DATA_DIRS="${SCRIPT_DIR}/../share${XDG_DATA_DIRS:+:}${XDG_DATA_DIRS}"
+        export QT_QPA_PLATFORM="xcb"
         export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"
         exec "${SCRIPT_DIR}/falkon.bin" "$@"
         EOF
