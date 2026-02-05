@@ -45,10 +45,10 @@ jobs:
           -DBUILD_TESTING=OFF \
           -DBUILD_PYTHON_SUPPORT=OFF
 
-    - name: Compile
+    - name: Compile (limited parallelism to reduce memory usage)
       run: |
         cd ${{ env.SOURCE_DIR }}
-        cmake --build ${{ env.BUILD_DIR }} --parallel
+        cmake --build ${{ env.BUILD_DIR }} --parallel 3
 
     - name: Install to local directory
       run: |
