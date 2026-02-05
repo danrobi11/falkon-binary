@@ -1,0 +1,150 @@
+name: Build Falkon Dynamic Binary
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-falkon:
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_DIR: falkon
+      BUILD_DIR: build
+      INSTALL_DIR: ${{ github.workspace }}/falkon-install
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt update -y
+        sudo apt install -y \
+          build-essential cmake extra-cmake-modules git pkg-config zip patchelf \
+          qt6-base-dev qt6-svg-dev qt6-webengine-dev qt6-webchannel-dev qt6-positioning-dev \
+          libkf6coreadditions-dev libkf6crash-dev libkf6i18n-dev libkf6wallet-dev libkf6windowsystem-dev \
+          libkf6purpose-dev \
+          libxcb1-dev libxcb-keysyms1-dev libxcb-icccm4-dev libxcb-cursor-dev libxkbcommon-x11-dev
+
+    - name: Clone Falkon source from Git
+      run: |
+        git clone --depth 1 --branch master https://invent.kde.org/network/falkon.git ${{ env.SOURCE_DIR }}
+
+    - name: Configure build with CMake
+      run: |
+        cd ${{ env.SOURCE_DIR }}
+        cmake -S . -B ${{ env.BUILD_DIR }} \
+          -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_DIR }} \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DBUILD_TESTING=OFF
+
+    - name: Compile
+      run: |
+        cd ${{ env.SOURCE_DIR }}
+        cmake --build ${{ env.BUILD_DIR }} --parallel
+
+    - name: Install to local directory
+      run: |
+        cd ${{ env.SOURCE_DIR }}
+        cmake --install ${{ env.BUILD_DIR }}
+
+    - name: Bundle Qt plugins, libexec, resources and translations
+      run: |
+        QT_SYSTEM_DIR=/usr/lib/x86_64-linux-gnu/qt6
+        SHARE_DIR=/usr/share/qt6
+
+        mkdir -p ${{ env.INSTALL_DIR }}/qt/plugins
+        cp -r $QT_SYSTEM_DIR/plugins/* ${{ env.INSTALL_DIR }}/qt/plugins/ 2>/dev/null || true
+
+        mkdir -p ${{ env.INSTALL_DIR }}/qt/libexec
+        cp -r $QT_SYSTEM_DIR/libexec/* ${{ env.INSTALL_DIR }}/qt/libexec/ 2>/dev/null || true
+
+        mkdir -p ${{ env.INSTALL_DIR }}/qt/resources
+        cp -r $QT_SYSTEM_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
+
+        mkdir -p ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales
+        cp -r $SHARE_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
+
+    - name: Bundle shared libraries into installation
+      run: |
+        mkdir -p ${{ env.INSTALL_DIR }}/lib
+        # Extensive exclusion list: core glibc, graphics/driver interfaces, X11, audio backends (force host ALSA, no Pulse)
+        EXCLUDE="libc.so libm.so libpthread.so librt.so libdl.so ld-linux-x86-64.so libutil.so libresolv.so libcrypt.so libnss_ libgcc_s.so libstdc++.so \
+                 libasound.so libpulse.so libpulse-simple.so libpipewire \
+                 libX11.so libXss.so libXpresent.so libXext.so libXrandr.so libXinerama.so libxcb.so \
+                 libvulkan.so libva.so libva-drm.so libva-x11.so libva-wayland.so libvdpau.so \
+                 libGL.so libGLX.so libGLdispatch.so libEGL.so libGLES libdrm.so libgbm.so"
+
+        FILES="${{ env.INSTALL_DIR }}/bin/falkon ${{ env.INSTALL_DIR }}/qt/libexec/QtWebEngineProcess"
+        # Initial pass: dependencies of falkon and QtWebEngineProcess
+        for file in $FILES; do
+          [ -f "$file" ] || continue
+          ldd "$file" | grep '=>' | awk '{print $3}' | sort -u | while read libpath; do
+            [ -f "$libpath" ] || continue
+            base=$(basename "$libpath")
+            if echo "$EXCLUDE" | grep -qw "$base"; then
+              echo "Skipping excluded library: $base"
+            else
+              cp -Lf "$libpath" "${{ env.INSTALL_DIR }}/lib/$base" && chmod 755 "${{ env.INSTALL_DIR }}/lib/$base"
+            fi
+          done
+        done
+        # Recursive passes for dependencies of bundled libraries
+        changed=1
+        while [ "$changed" = "1" ]; do
+          changed=0
+          for so in ${{ env.INSTALL_DIR }}/lib/*.so*; do
+            [ -f "$so" ] || continue
+            ldd "$so" | grep '=>' | awk '{print $3}' | sort -u | while read libpath; do
+              [ -f "$libpath" ] || continue
+              base=$(basename "$libpath")
+              if echo "$EXCLUDE" | grep -qw "$base"; then
+                echo "Skipping excluded library: $base"
+              elif [ ! -f "${{ env.INSTALL_DIR }}/lib/$base" ]; then
+                cp -Lf "$libpath" "${{ env.INSTALL_DIR }}/lib/$base" && chmod 755 "${{ env.INSTALL_DIR }}/lib/$base"
+                changed=1
+              fi
+            done
+          done
+        done
+
+    - name: Remove any accidentally bundled conflicting core libraries
+      run: |
+        rm -fv ${{ env.INSTALL_DIR }}/lib/libc.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libm.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libpthread.so.* \
+               ${{ env.INSTALL_DIR }}/lib/librt.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libdl.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libutil.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libresolv.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libcrypt.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libnss_* \
+               ${{ env.INSTALL_DIR }}/lib/ld-linux-x86-64.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libgcc_s.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libstdc++.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libanl.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libBrokenLocale.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libthread_db.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libmemusage.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libpcprofile.so.* \
+               ${{ env.INSTALL_DIR }}/lib/libSegFault.so.*
+
+    - name: Create launcher script
+      run: |
+        mv ${{ env.INSTALL_DIR }}/bin/falkon ${{ env.INSTALL_DIR }}/bin/falkon.bin
+        cat << 'EOF' > ${{ env.INSTALL_DIR }}/bin/falkon
+        #!/bin/sh
+        SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+        export LD_LIBRARY_PATH="${SCRIPT_DIR}/../lib${LD_LIBRARY_PATH:+:}${LD_LIBRARY_PATH}"
+        export QT_PLUGIN_PATH="${SCRIPT_DIR}/../qt/plugins"
+        export QTWEBENGINE_PROCESS_PATH="${SCRIPT_DIR}/../qt/libexec/QtWebEngineProcess"
+        export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"
+        exec "${SCRIPT_DIR}/falkon.bin" "$@"
+        EOF
+        chmod +x ${{ env.INSTALL_DIR }}/bin/falkon
+
+    - name: Upload installation artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: falkon-install
+        path: ${{ env.INSTALL_DIR }}
+        retention-days: 30
