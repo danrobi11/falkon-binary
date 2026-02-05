@@ -19,12 +19,20 @@ jobs:
       run: |
         sudo apt update -y
         sudo apt install -y \
-          build-essential cmake extra-cmake-modules git pkg-config zip patchelf \
+          build-essential cmake git pkg-config zip patchelf \
           qt6-base-dev qt6-svg-dev qt6-webengine-dev qt6-webchannel-dev qt6-positioning-dev \
           libxcb1-dev libxcb-keysyms1-dev libxcb-icccm4-dev libxcb-cursor-dev libxkbcommon-x11-dev \
           libxcb-render-util0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
           zlib1g-dev libbz2-dev liblzma-dev \
-          libgpgme-dev
+          libgpgme-dev libssl-dev
+
+    - name: Build and install Extra CMake Modules (ECM)
+      run: |
+        git clone --depth 1 https://invent.kde.org/frameworks/extra-cmake-modules.git kf6-ecm
+        mkdir kf6-ecm/build && cd kf6-ecm/build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF
+        cmake --build . --parallel
+        sudo cmake --install .
 
     - name: Build and install KF6 KConfig
       run: |
@@ -92,7 +100,8 @@ jobs:
         cmake -S . -B ${{ env.BUILD_DIR }} \
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_DIR }} \
           -DCMAKE_BUILD_TYPE=Release \
-          -DBUILD_TESTING=OFF
+          -DBUILD_TESTING=OFF \
+          -DBUILD_PYTHON_SUPPORT=OFF
 
     - name: Compile
       run: |
@@ -124,7 +133,6 @@ jobs:
     - name: Bundle shared libraries into installation
       run: |
         mkdir -p ${{ env.INSTALL_DIR }}/lib
-        # Exclusion list: core glibc, graphics/driver interfaces, X11, audio backends (use host ALSA/graphics)
         EXCLUDE="libc.so libm.so libpthread.so librt.so libdl.so ld-linux-x86-64.so libutil.so libresolv.so libcrypt.so libnss_ libgcc_s.so libstdc++.so \
                  libasound.so libpulse.so libpulse-simple.so libpipewire \
                  libX11.so libXss.so libXpresent.so libXext.so libXrandr.so libXinerama.so libxcb.so \
