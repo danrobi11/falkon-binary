@@ -13,18 +13,38 @@ jobs:
       SOURCE_DIR: falkon
       BUILD_DIR: build
       INSTALL_DIR: ${{ github.workspace }}/falkon-install
+      QT_VERSION: 6.8.*
+      QT_DIR: ${{ github.workspace }}/Qt
+      QT_ARCH: gcc_64
 
     steps:
     - name: Install system dependencies
       run: |
         sudo apt update -y
         sudo apt install -y \
-          build-essential cmake git pkg-config zip patchelf \
-          qt6-base-dev qt6-svg-dev qt6-webengine-dev qt6-webchannel-dev qt6-positioning-dev \
+          build-essential cmake git pkg-config zip patchelf ninja-build \
           libxcb1-dev libxcb-keysyms1-dev libxcb-icccm4-dev libxcb-cursor-dev libxkbcommon-x11-dev \
           libxcb-render-util0-dev libxcb-shape0-dev libxcb-xfixes0-dev \
           zlib1g-dev libbz2-dev liblzma-dev \
           libgpgme-dev libssl-dev
+
+    - name: Install Qt 6.8
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: ${{ env.QT_VERSION }}
+        host: linux
+        target: desktop
+        arch: ${{ env.QT_ARCH }}
+        dir: ${{ env.QT_DIR }}
+        modules: qtdeclarative qtprintsupport qtsvg qtwebchannel qtpositioning qtwebengine qtdbus
+        cached: false
+
+    - name: Set Qt environment variables
+      run: |
+        QT_PATH="${{ env.QT_DIR }}/$(ls ${{ env.QT_DIR }} | grep 6.8)/${{ env.QT_ARCH }}"
+        echo "QTDIR=$QT_PATH" >> $GITHUB_ENV
+        echo "$QT_PATH/bin" >> $GITHUB_PATH
+        echo "QT_INSTALL_DIR=$QT_PATH" >> $GITHUB_ENV
 
     - name: Build and install Extra CMake Modules (ECM)
       run: |
@@ -115,20 +135,17 @@ jobs:
 
     - name: Bundle Qt plugins, libexec, resources and translations
       run: |
-        QT_SYSTEM_DIR=/usr/lib/x86_64-linux-gnu/qt6
-        SHARE_DIR=/usr/share/qt6
-
         mkdir -p ${{ env.INSTALL_DIR }}/qt/plugins
-        cp -r $QT_SYSTEM_DIR/plugins/* ${{ env.INSTALL_DIR }}/qt/plugins/ 2>/dev/null || true
+        cp -r ${{ env.QT_INSTALL_DIR }}/plugins/* ${{ env.INSTALL_DIR }}/qt/plugins/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/libexec
-        cp -r $QT_SYSTEM_DIR/libexec/* ${{ env.INSTALL_DIR }}/qt/libexec/ 2>/dev/null || true
+        cp -r ${{ env.QT_INSTALL_DIR }}/libexec/* ${{ env.INSTALL_DIR }}/qt/libexec/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/resources
-        cp -r $QT_SYSTEM_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
+        cp -r ${{ env.QT_INSTALL_DIR }}/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales
-        cp -r $SHARE_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
+        cp -r ${{ env.QT_INSTALL_DIR }}/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
 
     - name: Bundle shared libraries into installation
       run: |
