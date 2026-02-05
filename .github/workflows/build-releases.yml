@@ -92,7 +92,6 @@ jobs:
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/libexec
         cp -r $QT_SYSTEM_DIR/libexec/* ${{ env.INSTALL_DIR }}/qt/libexec/ 2>/dev/null || true
-        # Arch Linux places QtWebEngineProcess directly in /usr/lib/qt6/
         cp /usr/lib/qt6/QtWebEngineProcess ${{ env.INSTALL_DIR }}/qt/libexec/QtWebEngineProcess 2>/dev/null || true
         chmod +x ${{ env.INSTALL_DIR }}/qt/libexec/QtWebEngineProcess 2>/dev/null || true
 
@@ -172,6 +171,7 @@ jobs:
         export LD_LIBRARY_PATH="${SCRIPT_DIR}/../lib${LD_LIBRARY_PATH:+:}${LD_LIBRARY_PATH}"
         export QT_PLUGIN_PATH="${SCRIPT_DIR}/../qt/plugins"
         export QTWEBENGINEPROCESS_PATH="${SCRIPT_DIR}/../qt/libexec/QtWebEngineProcess"
+        export QTWEBENGINE_RESOURCES_PATH="${SCRIPT_DIR}/../qt/resources"
         export XDG_DATA_DIRS="${SCRIPT_DIR}/../share${XDG_DATA_DIRS:+:}${XDG_DATA_DIRS}"
         export QT_QPA_PLATFORM="xcb"
         export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"
