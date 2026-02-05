@@ -28,7 +28,7 @@ jobs:
       run: |
         pacman -S --noconfirm \
           base-devel git cmake extra-cmake-modules ninja patchelf zip \
-          qt6-base qt6-declarative qt6-svg qt6-webengine qt6-webchannel qt6-positioning \
+          qt6-base qt6-declarative qt6-svg qt6-webengine qt6-webchannel qt6-positioning qt6-tools \
           kconfig kcoreaddons ki18n karchive kcrash kwindowsystem kwallet \
           libxcb gpgme openssl
 
