@@ -15,7 +15,7 @@ jobs:
     env:
       SOURCE_DIR: falkon
       BUILD_DIR: build
-      INSTALL_DIR: ${{ github.workspace }}/falkon-install
+      INSTALL_DIR: falkon-install
 
     steps:
     - name: Initialize pacman keys and update system
@@ -70,15 +70,15 @@ jobs:
         mkdir -p ${{ env.INSTALL_DIR }}/share/metainfo
         cp /usr/share/metainfo/org.kde.falkon.appdata.xml ${{ env.INSTALL_DIR }}/share/metainfo/ 2>/dev/null || true
 
-        # Falkon-specific libraries/plugins if present
         mkdir -p ${{ env.INSTALL_DIR }}/lib
         cp -r /usr/lib/falkon ${{ env.INSTALL_DIR }}/lib/ 2>/dev/null || true
+        cp -r /usr/lib/qt6/qml ${{ env.INSTALL_DIR }}/qt/ 2>/dev/null || true
 
     - name: Bundle Falkon icons (correct relative structure)
       run: |
         find /usr/share/icons -type f -name "falkon*" -exec sh -c 'rel_dir=$(dirname "$1" | sed "s|^/usr/share/icons/||"); mkdir -p "${{ env.INSTALL_DIR }}/share/icons/$rel_dir"; cp "$1" "${{ env.INSTALL_DIR }}/share/icons/$rel_dir/"' _ {} \; || true
 
-    - name: Bundle Falkon translations (correct relative structure, no /usr nesting)
+    - name: Bundle Falkon translations (correct relative structure)
       run: |
         find /usr/share/locale -type f -name "*falkon*.qm" -exec sh -c 'rel_dir=$(dirname "$1" | sed "s|^/usr/share/locale/||"); mkdir -p "${{ env.INSTALL_DIR }}/share/locale/$rel_dir"; cp "$1" "${{ env.INSTALL_DIR }}/share/locale/$rel_dir/"' _ {} \; || true
 
@@ -174,10 +174,10 @@ jobs:
         EOF
         chmod +x ${{ env.INSTALL_DIR }}/bin/falkon
 
-    - name: Debug - List final portable directory contents
+    - name: Debug - List final portable directory contents (relative paths)
       run: |
-        echo "Final structure of ${{ env.INSTALL_DIR }}:"
-        find ${{ env.INSTALL_DIR }} -type f | sed -e "s|${{ env.INSTALL_DIR }}/||" | sort
+        echo "Final relative structure of ${{ env.INSTALL_DIR }}:"
+        find ${{ env.INSTALL_DIR }} -type f | sed "s|${{ env.INSTALL_DIR }}/||"
 
     - name: Upload installation artifact
       uses: actions/upload-artifact@v4
