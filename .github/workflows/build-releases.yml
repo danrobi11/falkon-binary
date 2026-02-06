@@ -96,12 +96,12 @@ jobs:
         chmod +x ${{ env.INSTALL_DIR }}/qt/libexec/QtWebEngineProcess 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/resources
-        cp -r $SHARE_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
         cp -r $QT_SYSTEM_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
+        cp -r $SHARE_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales
-        cp -r $SHARE_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
         cp -r $QT_SYSTEM_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
+        cp -r $SHARE_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
 
     - name: Bundle shared libraries into installation
       run: |
@@ -165,20 +165,20 @@ jobs:
                ${{ env.INSTALL_DIR }}/lib/libpcprofile.so.* \
                ${{ env.INSTALL_DIR }}/lib/libSegFault.so.*
 
-    - name: Create launcher script
+    - name: Create launcher script (hardcoded absolute paths for your fixed location)
       run: |
         cat << 'EOF' > ${{ env.INSTALL_DIR }}/bin/falkon
         #!/bin/sh
-        SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-        export LD_LIBRARY_PATH="${SCRIPT_DIR}/../lib${LD_LIBRARY_PATH:+:}${LD_LIBRARY_PATH}"
-        export QT_PLUGIN_PATH="${SCRIPT_DIR}/../qt/plugins"
-        export QTWEBENGINEPROCESS_PATH="${SCRIPT_DIR}/../qt/libexec/QtWebEngineProcess"
-        export QTWEBENGINE_RESOURCES_PATH="${SCRIPT_DIR}/../qt/resources"
-        export QTWEBENGINE_LOCALES_PATH="${SCRIPT_DIR}/../qt/translations/qtwebengine_locales"
-        export XDG_DATA_DIRS="${SCRIPT_DIR}/../share${XDG_DATA_DIRS:+:}${XDG_DATA_DIRS}"
+        BUNDLE_ROOT="/home/danrobi/bin/falkon-install"
+        export LD_LIBRARY_PATH="${BUNDLE_ROOT}/lib${LD_LIBRARY_PATH:+:}${LD_LIBRARY_PATH}"
+        export QT_PLUGIN_PATH="${BUNDLE_ROOT}/qt/plugins"
+        export QTWEBENGINEPROCESS_PATH="${BUNDLE_ROOT}/qt/libexec/QtWebEngineProcess"
+        export QTWEBENGINE_RESOURCES_PATH="${BUNDLE_ROOT}/qt/resources"
+        export QTWEBENGINE_LOCALES_PATH="${BUNDLE_ROOT}/qt/translations/qtwebengine_locales"
+        export XDG_DATA_DIRS="${BUNDLE_ROOT}/share${XDG_DATA_DIRS:+:}${XDG_DATA_DIRS}"
         export QT_QPA_PLATFORM="xcb"
         export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"
-        exec "${SCRIPT_DIR}/falkon.bin" "$@"
+        exec "${BUNDLE_ROOT}/bin/falkon.bin" "$@"
         EOF
         chmod +x ${{ env.INSTALL_DIR }}/bin/falkon
 
