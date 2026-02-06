@@ -100,8 +100,8 @@ jobs:
         cp -r $SHARE_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales
-        cp -r $SHARE_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
         cp -r $QT_SYSTEM_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
+        cp -r $SHARE_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
 
     - name: Bundle shared libraries into installation
       run: |
@@ -174,6 +174,7 @@ jobs:
         export QT_PLUGIN_PATH="${SCRIPT_DIR}/../qt/plugins"
         export QTWEBENGINEPROCESS_PATH="${SCRIPT_DIR}/../qt/libexec/QtWebEngineProcess"
         export QTWEBENGINE_RESOURCES_PATH="${SCRIPT_DIR}/../qt/resources"
+        export QTWEBENGINE_LOCALES_PATH="${SCRIPT_DIR}/../qt/translations/qtwebengine_locales"
         export XDG_DATA_DIRS="${SCRIPT_DIR}/../share${XDG_DATA_DIRS:+:}${XDG_DATA_DIRS}"
         export QT_QPA_PLATFORM="xcb"
         export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"
