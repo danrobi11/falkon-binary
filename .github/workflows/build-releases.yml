@@ -96,12 +96,12 @@ jobs:
         chmod +x ${{ env.INSTALL_DIR }}/qt/libexec/QtWebEngineProcess 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/resources
-        cp -r $QT_SYSTEM_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
         cp -r $SHARE_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
+        cp -r $QT_SYSTEM_DIR/resources/* ${{ env.INSTALL_DIR }}/qt/resources/ 2>/dev/null || true
 
         mkdir -p ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales
-        cp -r $QT_SYSTEM_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
         cp -r $SHARE_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
+        cp -r $QT_SYSTEM_DIR/translations/qtwebengine_locales/* ${{ env.INSTALL_DIR }}/qt/translations/qtwebengine_locales/ 2>/dev/null || true
 
     - name: Bundle shared libraries into installation
       run: |
