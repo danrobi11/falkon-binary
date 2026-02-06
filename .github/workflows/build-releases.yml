@@ -165,11 +165,11 @@ jobs:
                ${{ env.INSTALL_DIR }}/lib/libpcprofile.so.* \
                ${{ env.INSTALL_DIR }}/lib/libSegFault.so.*
 
-    - name: Create launcher script (hardcoded absolute paths for your fixed location)
+    - name: Create launcher script (using $HOME for generic user path)
       run: |
         cat << 'EOF' > ${{ env.INSTALL_DIR }}/bin/falkon
         #!/bin/sh
-        BUNDLE_ROOT="/home/danrobi/bin/falkon-install"
+        BUNDLE_ROOT="$HOME/bin/falkon-install"
         export LD_LIBRARY_PATH="${BUNDLE_ROOT}/lib${LD_LIBRARY_PATH:+:}${LD_LIBRARY_PATH}"
         export QT_PLUGIN_PATH="${BUNDLE_ROOT}/qt/plugins"
         export QTWEBENGINEPROCESS_PATH="${BUNDLE_ROOT}/qt/libexec/QtWebEngineProcess"
